@@ -1,0 +1,28 @@
+# ===== Core Data Science =====
+numpy==2.2.3
+scipy==1.15.2
+pandas==2.2.3
+
+# ===== Machine Learning =====
+scikit-learn==1.6.1
+joblib==1.4.2
+
+# ===== EEG Signal Processing =====
+mne==1.9.0
+antropy==0.1.9
+PyWavelets==1.8.0
+
+# ===== Visualization =====
+matplotlib==3.10.1
+seaborn==0.13.2
+
+# ===== Model Export =====
+onnx==1.17.0
+onnxruntime==1.21.0
+
+# ===== Utilities =====
+h5py==3.13.0
+jupyter==1.1.1
+ipykernel==6.29.5
+# tqdm already installed
+# pillow already installed
