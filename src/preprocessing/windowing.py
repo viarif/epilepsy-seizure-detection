@@ -1,11 +1,12 @@
 import numpy as np
 from pathlib import Path
+import re
 import sys
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.utils.eeg_loader import load_edf_channels, find_fz_cz_alternative
+from src.utils.eeg_loader import load_edf_channels
 from src.utils.annotation_parser import parse_seizure_times, check_window_seizure_label
 
 
@@ -90,7 +91,8 @@ def augment_seizure_window(window, n_augments=1, max_shift_samples=128, random_s
 def process_edf_file(edf_path, summary_file, target_channels,
                      window_duration=4.0, overlap_ratio=0.5,
                      seizure_threshold=0.25, augment_seizures=True,
-                     augment_overlap_threshold=0.5, random_seed=42):
+                     augment_overlap_threshold=0.5, random_seed=42,
+                     patient_id=None):
     """
     Process one EDF file: load, window, label, augment.
 
@@ -104,6 +106,11 @@ def process_edf_file(edf_path, summary_file, target_channels,
         augment_seizures: Whether to augment seizure windows
         augment_overlap_threshold: Only augment windows with overlap >= this (0.5 = 50%)
         random_seed: Random seed for augmentation reproducibility
+        patient_id: Patient ID for the split contract (e.g. 'chb17'). If None,
+            it is inferred from the filename prefix -- but that is WRONG for
+            multi-part recordings like 'chb17a_03.edf' (which would yield
+            'chb17a'). Callers that know the source directory should pass the
+            directory name so patient-level splitting stays correct.
 
     Returns:
         X: numpy array [n_windows, n_channels, n_samples_per_window]
@@ -113,21 +120,11 @@ def process_edf_file(edf_path, summary_file, target_channels,
     # Set random seed for reproducibility
     if random_seed is not None:
         np.random.seed(random_seed)
-    # Load EDF data
+    # Load EDF data. The loader resolves duplicate-suffix names and any FZ-CZ
+    # substitute internally, and returns rows in target_channels order so the
+    # downstream feature extractor's channel-index contract stays valid.
     print(f"Loading {Path(edf_path).name}...")
-    data, sfreq, available_channels = load_edf_channels(edf_path, target_channels)
-
-    # Check if we need to find alternative for FZ-CZ
-    actual_channels = available_channels.copy()
-    if 'FZ-CZ' in target_channels and 'FZ-CZ' not in available_channels:
-        print(f"  FZ-CZ not found. Available channels: {available_channels}")
-        alternative = find_fz_cz_alternative(available_channels)
-        print(f"  Using alternative: {alternative}")
-
-        # Replace FZ-CZ with alternative in target list and reload
-        adjusted_targets = [ch if ch != 'FZ-CZ' else alternative for ch in target_channels]
-        data, sfreq, available_channels = load_edf_channels(edf_path, adjusted_targets)
-        actual_channels = available_channels
+    data, sfreq, actual_channels = load_edf_channels(edf_path, target_channels)
 
     print(f"  Loaded {len(actual_channels)} channels: {actual_channels}")
     print(f"  Sampling rate: {sfreq} Hz")
@@ -135,7 +132,12 @@ def process_edf_file(edf_path, summary_file, target_channels,
 
     # Parse seizure annotations
     edf_filename = Path(edf_path).name
-    patient_id = edf_filename.split('_')[0]  # Extract patient ID (e.g., 'chb01' from 'chb01_03.edf')
+    if patient_id is None:
+        # Fallback inference. Strip a trailing letter from the numeric-prefix
+        # part so 'chb17a_03.edf' -> 'chb17', not 'chb17a'. Callers should pass
+        # patient_id explicitly (the directory name) to avoid relying on this.
+        prefix = edf_filename.split('_')[0]
+        patient_id = re.sub(r'[a-z]$', '', prefix)
     seizure_intervals = parse_seizure_times(summary_file, edf_filename)
     print(f"  Seizure intervals: {seizure_intervals}")
 
@@ -150,32 +152,37 @@ def process_edf_file(edf_path, summary_file, target_channels,
     windows, window_starts = create_sliding_windows(data, window_samples, step_samples)
     print(f"  Created {len(windows)} windows")
 
-    # Generate labels and record overlap ratios
+    # Generate labels and record per-window seizure-overlap fractions.
+    # NOTE: use a distinct name (`seizure_overlap`) for the window/seizure
+    # overlap so we never shadow the `overlap_ratio` *parameter* (the sliding
+    # step overlap). They mean different things and mixing them silently
+    # corrupted the saved metadata before.
     labels = []
-    overlap_ratios = []
+    seizure_overlaps = []
     window_metadata = []
 
     for window_idx, start_idx in enumerate(window_starts):
         start_sec = start_idx / sfreq
-        label, overlap_ratio = check_window_seizure_label(start_sec, window_duration,
+        label, seizure_overlap = check_window_seizure_label(start_sec, window_duration,
                                           seizure_intervals, seizure_threshold)
         labels.append(label)
-        overlap_ratios.append(overlap_ratio)
+        seizure_overlaps.append(seizure_overlap)
 
-        # Store metadata for each window
+        # Store metadata for each window. `seizure_overlap` is the fraction of
+        # this window covered by a labelled seizure (0.0 for background files).
         window_metadata.append({
             'window_idx': window_idx,
             'start_sample': start_idx,
             'start_time_sec': start_sec,
             'end_time_sec': start_sec + window_duration,
-            'overlap_ratio': overlap_ratio,
+            'seizure_overlap': seizure_overlap,
             'is_augmented': False,
             'augment_shift': None,
             'original_window_idx': window_idx
         })
 
     labels = np.array(labels)
-    overlap_ratios = np.array(overlap_ratios)
+    seizure_overlaps = np.array(seizure_overlaps)
     n_seizure = np.sum(labels == 1)
     n_normal = np.sum(labels == 0)
     print(f"  Labels: {n_seizure} seizure, {n_normal} normal (ratio 1:{n_normal/max(n_seizure,1):.1f})")
@@ -190,13 +197,13 @@ def process_edf_file(edf_path, summary_file, target_channels,
         n_augmented_windows = 0
         augment_counter = 0
 
-        for window, label, overlap_ratio, meta in zip(windows, labels, overlap_ratios, window_metadata):
+        for window, label, seizure_overlap, meta in zip(windows, labels, seizure_overlaps, window_metadata):
             X_list.append(window)
             y_list.append(label)
             metadata_list.append(meta)
 
             # Only augment windows with sufficient overlap to ensure label stability
-            if label == 1 and overlap_ratio >= augment_overlap_threshold:
+            if label == 1 and seizure_overlap >= augment_overlap_threshold:
                 # Generate 2 augmented copies with unique seeds
                 base_seed = random_seed + augment_counter if random_seed is not None else None
                 augmented, shifts = augment_seizure_window(window, n_augments=2,
