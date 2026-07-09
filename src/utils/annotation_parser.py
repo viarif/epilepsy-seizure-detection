@@ -29,13 +29,26 @@ def parse_seizure_times(summary_file, edf_filename):
     if not num_seizures_match or int(num_seizures_match.group(1)) == 0:
         return []
 
-    # Extract seizure times
+    # Extract seizure times - support both formats:
+    # Format 1: "Seizure Start Time: 2996 seconds"
+    # Format 2: "Seizure 1 Start Time: 2996 seconds"
     seizures = []
-    start_times = re.findall(r'Seizure Start Time:\s*(\d+)\s*seconds', file_section)
-    end_times = re.findall(r'Seizure End Time:\s*(\d+)\s*seconds', file_section)
 
-    for start, end in zip(start_times, end_times):
-        seizures.append((int(start), int(end)))
+    # Try format with numbers first (Seizure 1, Seizure 2, etc.)
+    numbered_starts = re.findall(r'Seizure \d+ Start Time:\s*(\d+)\s*seconds', file_section)
+    numbered_ends = re.findall(r'Seizure \d+ End Time:\s*(\d+)\s*seconds', file_section)
+
+    if numbered_starts and numbered_ends:
+        # Use numbered format
+        for start, end in zip(numbered_starts, numbered_ends):
+            seizures.append((int(start), int(end)))
+    else:
+        # Fall back to unnumbered format
+        start_times = re.findall(r'Seizure Start Time:\s*(\d+)\s*seconds', file_section)
+        end_times = re.findall(r'Seizure End Time:\s*(\d+)\s*seconds', file_section)
+
+        for start, end in zip(start_times, end_times):
+            seizures.append((int(start), int(end)))
 
     return seizures
 

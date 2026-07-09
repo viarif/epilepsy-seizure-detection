@@ -42,7 +42,7 @@ def create_sliding_windows(data, window_size, step_size):
     return np.array(windows), window_starts
 
 
-def augment_seizure_window(window, n_augments=1, max_shift_samples=128):
+def augment_seizure_window(window, n_augments=1, max_shift_samples=128, random_seed=None):
     """
     Apply time-shift augmentation to seizure windows.
 
@@ -50,16 +50,23 @@ def augment_seizure_window(window, n_augments=1, max_shift_samples=128):
         window: numpy array [n_channels, window_size]
         n_augments: Number of augmented copies to generate
         max_shift_samples: Maximum time shift in samples (±0.5s at 256Hz = ±128 samples)
+        random_seed: Random seed for reproducibility (optional)
 
     Returns:
         augmented: List of augmented windows
+        shifts: List of shift values applied (for metadata tracking)
     """
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
     augmented = []
+    shifts = []
     n_channels, window_size = window.shape
 
     for _ in range(n_augments):
         # Random shift
         shift = np.random.randint(-max_shift_samples, max_shift_samples + 1)
+        shifts.append(shift)
 
         if shift == 0:
             augmented.append(window.copy())
@@ -77,13 +84,13 @@ def augment_seizure_window(window, n_augments=1, max_shift_samples=128):
             shifted[:, -shift:] = window[:, -shift:][:, ::-1]  # Mirror padding
             augmented.append(shifted)
 
-    return augmented
+    return augmented, shifts
 
 
 def process_edf_file(edf_path, summary_file, target_channels,
                      window_duration=4.0, overlap_ratio=0.5,
                      seizure_threshold=0.25, augment_seizures=True,
-                     augment_overlap_threshold=0.5):
+                     augment_overlap_threshold=0.5, random_seed=42):
     """
     Process one EDF file: load, window, label, augment.
 
@@ -96,28 +103,39 @@ def process_edf_file(edf_path, summary_file, target_channels,
         seizure_threshold: Minimum overlap ratio to label as seizure (0.25 = 25%)
         augment_seizures: Whether to augment seizure windows
         augment_overlap_threshold: Only augment windows with overlap >= this (0.5 = 50%)
+        random_seed: Random seed for augmentation reproducibility
 
     Returns:
         X: numpy array [n_windows, n_channels, n_samples_per_window]
         y: numpy array [n_windows] with labels (0=normal, 1=seizure)
-        info: dict with metadata
+        metadata: dict with detailed metadata for each window
     """
+    # Set random seed for reproducibility
+    if random_seed is not None:
+        np.random.seed(random_seed)
     # Load EDF data
     print(f"Loading {Path(edf_path).name}...")
     data, sfreq, available_channels = load_edf_channels(edf_path, target_channels)
 
     # Check if we need to find alternative for FZ-CZ
+    actual_channels = available_channels.copy()
     if 'FZ-CZ' in target_channels and 'FZ-CZ' not in available_channels:
         print(f"  FZ-CZ not found. Available channels: {available_channels}")
         alternative = find_fz_cz_alternative(available_channels)
         print(f"  Using alternative: {alternative}")
 
-    print(f"  Loaded {len(available_channels)} channels: {available_channels}")
+        # Replace FZ-CZ with alternative in target list and reload
+        adjusted_targets = [ch if ch != 'FZ-CZ' else alternative for ch in target_channels]
+        data, sfreq, available_channels = load_edf_channels(edf_path, adjusted_targets)
+        actual_channels = available_channels
+
+    print(f"  Loaded {len(actual_channels)} channels: {actual_channels}")
     print(f"  Sampling rate: {sfreq} Hz")
     print(f"  Duration: {data.shape[1] / sfreq:.1f} seconds")
 
     # Parse seizure annotations
     edf_filename = Path(edf_path).name
+    patient_id = edf_filename.split('_')[0]  # Extract patient ID (e.g., 'chb01' from 'chb01_03.edf')
     seizure_intervals = parse_seizure_times(summary_file, edf_filename)
     print(f"  Seizure intervals: {seizure_intervals}")
 
@@ -135,12 +153,26 @@ def process_edf_file(edf_path, summary_file, target_channels,
     # Generate labels and record overlap ratios
     labels = []
     overlap_ratios = []
-    for start_idx in window_starts:
+    window_metadata = []
+
+    for window_idx, start_idx in enumerate(window_starts):
         start_sec = start_idx / sfreq
         label, overlap_ratio = check_window_seizure_label(start_sec, window_duration,
                                           seizure_intervals, seizure_threshold)
         labels.append(label)
         overlap_ratios.append(overlap_ratio)
+
+        # Store metadata for each window
+        window_metadata.append({
+            'window_idx': window_idx,
+            'start_sample': start_idx,
+            'start_time_sec': start_sec,
+            'end_time_sec': start_sec + window_duration,
+            'overlap_ratio': overlap_ratio,
+            'is_augmented': False,
+            'augment_shift': None,
+            'original_window_idx': window_idx
+        })
 
     labels = np.array(labels)
     overlap_ratios = np.array(overlap_ratios)
@@ -153,20 +185,39 @@ def process_edf_file(edf_path, summary_file, target_channels,
         print(f"  Applying augmentation to seizure windows (overlap >= {augment_overlap_threshold*100:.0f}%)...")
         X_list = []
         y_list = []
+        metadata_list = []
 
         n_augmented_windows = 0
+        augment_counter = 0
 
-        for window, label, overlap_ratio in zip(windows, labels, overlap_ratios):
+        for window, label, overlap_ratio, meta in zip(windows, labels, overlap_ratios, window_metadata):
             X_list.append(window)
             y_list.append(label)
+            metadata_list.append(meta)
 
             # Only augment windows with sufficient overlap to ensure label stability
             if label == 1 and overlap_ratio >= augment_overlap_threshold:
-                # Generate 2 augmented copies
-                augmented = augment_seizure_window(window, n_augments=2, max_shift_samples=128)
-                X_list.extend(augmented)
-                y_list.extend([1] * len(augmented))
+                # Generate 2 augmented copies with unique seeds
+                base_seed = random_seed + augment_counter if random_seed is not None else None
+                augmented, shifts = augment_seizure_window(window, n_augments=2,
+                                                          max_shift_samples=128,
+                                                          random_seed=base_seed)
+
+                # Add augmented windows with metadata
+                for aug_idx, (aug_window, shift) in enumerate(zip(augmented, shifts)):
+                    X_list.append(aug_window)
+                    y_list.append(1)
+
+                    # Create metadata for augmented window
+                    aug_meta = meta.copy()
+                    aug_meta['is_augmented'] = True
+                    aug_meta['augment_shift'] = shift
+                    aug_meta['augment_idx'] = aug_idx
+                    aug_meta['window_idx'] = len(metadata_list)  # Update to new index
+                    metadata_list.append(aug_meta)
+
                 n_augmented_windows += 1
+                augment_counter += 1
 
         X = np.array(X_list)
         y = np.array(y_list)
@@ -178,18 +229,24 @@ def process_edf_file(edf_path, summary_file, target_channels,
     else:
         X = windows
         y = labels
+        metadata_list = window_metadata
 
-    info = {
+    metadata = {
+        'patient_id': patient_id,
         'edf_file': edf_filename,
-        'channels': available_channels,
+        'channels': actual_channels,
         'sfreq': sfreq,
         'window_duration': window_duration,
         'overlap_ratio': overlap_ratio,
         'seizure_threshold': seizure_threshold,
         'augment_overlap_threshold': augment_overlap_threshold if augment_seizures else None,
-        'n_windows': len(X),
+        'random_seed': random_seed,
+        'n_windows_total': len(X),
+        'n_windows_original': len(windows),
         'n_seizure': np.sum(y == 1),
         'n_normal': np.sum(y == 0),
+        'seizure_intervals': seizure_intervals,
+        'window_metadata': metadata_list  # Detailed per-window metadata
     }
 
-    return X, y, info
+    return X, y, metadata

@@ -7,13 +7,18 @@ This script:
 3. Saves features and labels to data/processed/
 
 Usage:
-    python scripts/02_extract_features.py
+    # Extract features from single file
+    python scripts/02_extract_features.py --file chb01_03_windows.npz
+
+    # Extract features from all window files
+    python scripts/02_extract_features.py --all-files
 """
 
 import numpy as np
 from pathlib import Path
 import sys
 import time
+import argparse
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -24,6 +29,13 @@ from src.features import FeatureExtractor
 def main():
     """Extract features from all processed window files."""
 
+    parser = argparse.ArgumentParser(description='Extract features from windowed EEG data')
+    parser.add_argument('--file', type=str, help='Specific window file to process')
+    parser.add_argument('--all-files', action='store_true',
+                       help='Process all window files')
+
+    args = parser.parse_args()
+
     # Paths
     project_root = Path(__file__).parent.parent
     processed_dir = project_root / 'data' / 'processed'
@@ -33,8 +45,17 @@ def main():
     print("=" * 80)
     print()
 
-    # Find all window files
-    window_files = sorted(processed_dir.glob('*_windows.npz'))
+    # Find window files to process
+    if args.file:
+        window_files = [processed_dir / args.file]
+    elif args.all_files:
+        window_files = sorted(processed_dir.glob('*_windows.npz'))
+    else:
+        # Default: find all window files
+        window_files = sorted(processed_dir.glob('*_windows.npz'))
+        if not window_files:
+            print("No window files found. Use --help for options.")
+            return
 
     if not window_files:
         print(f"Error: No window files found in {processed_dir}")
@@ -61,29 +82,38 @@ def main():
 
         # Load windowed data
         print("Loading windowed data...")
-        data = np.load(window_file)
+        data = np.load(window_file, allow_pickle=True)
 
-        windows = data['X']
-        labels = data['y']
-        channels = data['channels']
-        sfreq = float(data['sfreq'])
+        # Check data format
+        if 'X' in data:
+            windows = data['X']
+            labels = data['y']
 
-        # Build info dict from available data
-        info = {
-            'edf_file': window_file.stem.replace('_windows', ''),
-            'channels': channels.tolist() if hasattr(channels, 'tolist') else list(channels),
-            'sfreq': sfreq,
-            'n_windows': len(windows),
-            'n_seizure': int(np.sum(labels == 1)),
-            'n_normal': int(np.sum(labels == 0)),
-        }
+            # Handle metadata
+            if 'metadata' in data:
+                metadata = data['metadata'].item()  # New format with full metadata
+            else:
+                # Old format: reconstruct minimal metadata
+                metadata = {
+                    'edf_file': window_file.stem.replace('_windows', ''),
+                    'channels': data['channels'].tolist() if 'channels' in data else ['T7-P7', 'T8-P8', 'FZ-CZ'],
+                    'sfreq': float(data['sfreq']) if 'sfreq' in data else 256.0,
+                    'n_windows_total': len(windows),
+                    'n_seizure': int(np.sum(labels == 1)),
+                    'n_normal': int(np.sum(labels == 0)),
+                }
+        else:
+            print(f"  Error: Unexpected data format in {window_file.name}")
+            continue
 
         print(f"  Windows shape: {windows.shape}")
         print(f"  Labels shape: {labels.shape}")
-        print(f"  Channels: {info['channels']}")
-        print(f"  Sampling frequency: {sfreq} Hz")
-        print(f"  Seizure windows: {info['n_seizure']}")
-        print(f"  Normal windows: {info['n_normal']}")
+        print(f"  Patient ID: {metadata.get('patient_id', 'unknown')}")
+        print(f"  EDF file: {metadata.get('edf_file', 'unknown')}")
+        print(f"  Channels: {metadata.get('channels', 'unknown')}")
+        print(f"  Sampling frequency: {metadata.get('sfreq', 256)} Hz")
+        print(f"  Seizure windows: {metadata.get('n_seizure', np.sum(labels==1))}")
+        print(f"  Normal windows: {metadata.get('n_normal', np.sum(labels==0))}")
         print()
 
         # Extract features
@@ -123,7 +153,7 @@ def main():
             features=features,
             labels=labels,
             feature_names=extractor.get_feature_names(),
-            info=info
+            metadata=metadata  # Preserve all metadata
         )
         print(f"  Saved: {output_file}")
 
@@ -155,8 +185,9 @@ def main():
     print("Feature extraction completed!")
     print()
     print("Next steps:")
-    print("  1. Run feature selection (Random Forest) - scripts/03_select_features.py")
-    print("  2. Train MLP classifier - scripts/04_train_mlp.py")
+    print("  1. Merge all features: python scripts/merge_all_features.py")
+    print("  2. Run feature selection (Random Forest) - scripts/03_select_features.py")
+    print("  3. Train MLP classifier - scripts/04_train_mlp.py")
     print()
 
 
