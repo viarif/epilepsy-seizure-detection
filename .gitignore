@@ -57,3 +57,22 @@ Thumbs.db
 *.tmp
 *.bak
 *.cache
+tempCodeRunnerFile.py
+read.py
+read_files_demo.py
+view.py
+
+# Papers and documentation
+papers/
+*.pdf
+如何选择Python环境.md
+
+# Large data files
+*.npz
+*.npy
+dataset.npz
+
+# Model files
+*.pt
+*.pth
+*.ckpt

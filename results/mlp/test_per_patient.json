@@ -1,0 +1,68 @@
+{
+  "threshold": 0.75,
+  "selected_from_split": "val",
+  "criterion": "val F1 peak (window-level) = balanced sens/spec tradeoff",
+  "test_overall": {
+    "roc_auc": 0.7210511708065261,
+    "pr_auc": 0.03341636743078406,
+    "sensitivity": 0.5276752767527675,
+    "specificity": 0.698412851142853,
+    "precision": 0.0022759828107591913,
+    "f1_score": 0.004532416285003408,
+    "n_windows": 208128,
+    "n_positive": 271
+  },
+  "test_per_patient": [
+    {
+      "patient": "chb06",
+      "n_windows": 120104,
+      "n_positive": 93,
+      "prevalence": 0.000774328914940385,
+      "roc_auc": 0.5676363179253371,
+      "pr_auc": 0.0008552260962786363,
+      "threshold": 0.75,
+      "sensitivity": 0.5913978494623656,
+      "specificity": 0.5085533826065944,
+      "precision": 0.0009316664972727581,
+      "f1_score": 0.0018604021851269302,
+      "TP": 55,
+      "FN": 38,
+      "TN": 61032,
+      "FP": 58979
+    },
+    {
+      "patient": "chb16",
+      "n_windows": 34181,
+      "n_positive": 55,
+      "prevalence": 0.0016090810684298293,
+      "roc_auc": 0.7658175850990714,
+      "pr_auc": 0.0034310072082033493,
+      "threshold": 0.75,
+      "sensitivity": 0.12727272727272726,
+      "specificity": 0.8932778526636582,
+      "precision": 0.0019183337900794738,
+      "f1_score": 0.0037796976241900654,
+      "TP": 7,
+      "FN": 48,
+      "TN": 30484,
+      "FP": 3642
+    },
+    {
+      "patient": "chb19",
+      "n_windows": 53843,
+      "n_positive": 123,
+      "prevalence": 0.002284419516000223,
+      "roc_auc": 0.9868827524835189,
+      "pr_auc": 0.6598614148678246,
+      "threshold": 0.75,
+      "sensitivity": 0.6585365853658537,
+      "specificity": 0.998771407297096,
+      "precision": 0.5510204081632653,
+      "f1_score": 0.6,
+      "TP": 81,
+      "FN": 42,
+      "TN": 53654,
+      "FP": 66
+    }
+  ]
+}
