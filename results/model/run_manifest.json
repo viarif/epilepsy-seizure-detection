@@ -1,0 +1,50 @@
+{
+  "protocol": "patient_bout_balanced_hard_negative_replay",
+  "status": "model selection used train and validation only",
+  "model": "SeizureNetLite",
+  "parameter_count": 2991,
+  "canonical_channels": [
+    "F7-T7",
+    "T7-P7",
+    "F8-T8",
+    "T8-P8"
+  ],
+  "cache_root": "E:\\summer\\data\\processed\\selected4",
+  "locked_training": {
+    "positive_fraction": 0.05,
+    "replay_fraction_after_warmup": 0.5,
+    "hard_negatives_per_recording": 256,
+    "target_specificity": 0.97
+  },
+  "split_counts": {
+    "train_windows_full": 4978878,
+    "train_positive_windows": 10840,
+    "train_windows_per_epoch": 216800,
+    "train_positive_fraction_per_epoch": 0.05,
+    "validation_windows": 593973,
+    "validation_positive_windows": 4802
+  },
+  "runtime": {
+    "python": "3.10.20 | packaged by Anaconda, Inc. | (main, Jun 11 2026, 15:13:20) [MSC v.1942 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "torch": "2.7.0+cu128",
+    "cuda": "12.8",
+    "device": "cuda:0",
+    "device_name": "NVIDIA GeForce RTX 5070 Laptop GPU"
+  },
+  "arguments": {
+    "cache_root": "data\\processed\\selected4",
+    "output_dir": "results\\model",
+    "batch_size": 256,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0,
+    "max_epochs": 50,
+    "patience": 5,
+    "num_workers": 4,
+    "seed": 20260718,
+    "gradient_clip_norm": 5.0,
+    "device": "cuda:0",
+    "no_amp": false,
+    "deterministic": false
+  }
+}

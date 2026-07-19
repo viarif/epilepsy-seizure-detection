@@ -1,38 +1,13 @@
-# ===== Core Data Science =====
+# Numerical and signal processing
 numpy==2.2.3
 scipy==1.15.2
-pandas==2.2.3
 
-# ===== Machine Learning =====
-scikit-learn==1.6.1
-joblib==1.4.2
-
-# ===== Deep Learning (MLP training, scripts/06 & 07) =====
-# PyTorch is a CUDA build and is NOT installed via this file -- `pip install
-# torch` here would pull the CPU wheel and can clash with the CUDA runtime.
-# The MLP steps were trained/verified in the `unet` conda env:
-#     torch==2.7.0+cu128   (CUDA 12.8, GPU)
-# Reproduce with that env, or install the matching wheel from
-# https://pytorch.org/get-started/locally/ for your CUDA version, e.g.:
-#     pip install torch==2.7.0 --index-url https://download.pytorch.org/whl/cu128
-# CPU-only also works (slower): pip install torch==2.7.0
-
-# ===== EEG Signal Processing =====
+# EEG/EDF loading
 mne==1.9.0
-antropy==0.1.9
-PyWavelets==1.8.0
 
-# ===== Visualization =====
-matplotlib==3.10.1
-seaborn==0.13.2
+# Thresholding and evaluation metrics
+scikit-learn==1.6.1
 
-# ===== Model Export =====
-onnx==1.17.0
-onnxruntime==1.21.0
-
-# ===== Utilities =====
-h5py==3.13.0
-jupyter==1.1.1
-ipykernel==6.29.5
-# tqdm already installed
-# pillow already installed
+# PyTorch is intentionally not pinned here because the local machine uses a
+# CUDA build. Install a matching CPU/CUDA wheel separately. The current local
+# training environment is C:\Users\ASUS\anaconda3\envs\unet.

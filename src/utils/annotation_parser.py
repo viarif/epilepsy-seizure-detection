@@ -1,5 +1,11 @@
 import re
-from pathlib import Path
+
+
+def _read_summary(summary_file):
+    # CHB-MIT summaries are ASCII.  utf-8 keeps that exact while making the
+    # behavior explicit across Windows/Linux.
+    with open(summary_file, 'r', encoding='utf-8') as handle:
+        return handle.read()
 
 def parse_seizure_times(summary_file, edf_filename):
     """
@@ -12,8 +18,7 @@ def parse_seizure_times(summary_file, edf_filename):
     Returns:
         List of (start_sec, end_sec) tuples, empty list if no seizures
     """
-    with open(summary_file, 'r') as f:
-        content = f.read()
+    content = _read_summary(summary_file)
 
     # Find the section for this file
     pattern = rf'File Name: {re.escape(edf_filename)}.*?(?=File Name:|$)'
@@ -53,32 +58,12 @@ def parse_seizure_times(summary_file, edf_filename):
     return seizures
 
 
-def check_window_seizure_label(window_start_sec, window_duration_sec, seizure_intervals, threshold=0.25):
-    """
-    Determine if a window should be labeled as seizure based on overlap.
+def is_seizure_time(time_sec, seizure_intervals):
+    """Return True when ``time_sec`` lies in any [start, end) interval."""
+    return any(start <= time_sec < end for start, end in seizure_intervals)
 
-    Args:
-        window_start_sec: Window start time in seconds
-        window_duration_sec: Window duration (e.g., 4 seconds)
-        seizure_intervals: List of (start, end) tuples in seconds
-        threshold: Minimum overlap ratio to label as seizure (default 0.25 = 25%)
 
-    Returns:
-        label: 1 if seizure, 0 if non-seizure
-        overlap_ratio: Actual overlap ratio (0.0 to 1.0)
-    """
-    window_end_sec = window_start_sec + window_duration_sec
-
-    total_overlap = 0.0
-    for seizure_start, seizure_end in seizure_intervals:
-        # Calculate overlap
-        overlap_start = max(window_start_sec, seizure_start)
-        overlap_end = min(window_end_sec, seizure_end)
-
-        if overlap_start < overlap_end:
-            total_overlap += (overlap_end - overlap_start)
-
-    overlap_ratio = total_overlap / window_duration_sec
-    label = 1 if overlap_ratio >= threshold else 0
-
-    return label, overlap_ratio
+def label_window_center(window_start_sec, window_duration_sec, seizure_intervals):
+    """Apply the locked 1-second-window label rule from README.md."""
+    center_sec = window_start_sec + window_duration_sec / 2.0
+    return int(is_seizure_time(center_sec, seizure_intervals))

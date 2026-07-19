@@ -1,0 +1,35 @@
+{
+  "chb13": {
+    "sensitivity": 0.23214285714285715,
+    "specificity": 0.9729768119029863,
+    "true_positives": 195,
+    "false_positives": 5327,
+    "true_negatives": 191800,
+    "false_negatives": 645,
+    "positive_count": 840,
+    "negative_count": 197127,
+    "window_count": 197967
+  },
+  "chb14": {
+    "sensitivity": 0.0,
+    "specificity": 0.9951874887558149,
+    "true_positives": 0,
+    "false_positives": 749,
+    "true_negatives": 154887,
+    "false_negatives": 338,
+    "positive_count": 338,
+    "negative_count": 155636,
+    "window_count": 155974
+  },
+  "chb15": {
+    "sensitivity": 0.7240618101545254,
+    "specificity": 0.9509365165307435,
+    "true_positives": 2624,
+    "false_positives": 11599,
+    "true_negatives": 224809,
+    "false_negatives": 1000,
+    "positive_count": 3624,
+    "negative_count": 236408,
+    "window_count": 240032
+  }
+}

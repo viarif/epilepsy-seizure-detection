@@ -1,0 +1,71 @@
+{
+  "threshold_logit": -2.632594108581543,
+  "threshold_probability": 0.06706995072763683,
+  "sensitivity": 0.5870470637234486,
+  "specificity": 0.9700002206490136,
+  "precision": 0.1375524543768908,
+  "f1": 0.22288108791903857,
+  "accuracy": 0.9669042195520672,
+  "balanced_accuracy": 0.7785236421862312,
+  "pr_auc": 0.308181330550344,
+  "roc_auc": 0.8560796218069827,
+  "true_positives": 2819,
+  "false_positives": 17675,
+  "true_negatives": 571496,
+  "false_negatives": 1983,
+  "positive_count": 4802,
+  "negative_count": 589171,
+  "window_count": 593973,
+  "per_patient": {
+    "chb13": {
+      "sensitivity": 0.23214285714285715,
+      "specificity": 0.9729768119029863,
+      "true_positives": 195,
+      "false_positives": 5327,
+      "true_negatives": 191800,
+      "false_negatives": 645,
+      "positive_count": 840,
+      "negative_count": 197127,
+      "window_count": 197967
+    },
+    "chb14": {
+      "sensitivity": 0.0,
+      "specificity": 0.9951874887558149,
+      "true_positives": 0,
+      "false_positives": 749,
+      "true_negatives": 154887,
+      "false_negatives": 338,
+      "positive_count": 338,
+      "negative_count": 155636,
+      "window_count": 155974
+    },
+    "chb15": {
+      "sensitivity": 0.7240618101545254,
+      "specificity": 0.9509365165307435,
+      "true_positives": 2624,
+      "false_positives": 11599,
+      "true_negatives": 224809,
+      "false_negatives": 1000,
+      "positive_count": 3624,
+      "negative_count": 236408,
+      "window_count": 240032
+    }
+  },
+  "event_metrics": {
+    "false_alarms": 8916,
+    "evaluated_hours": 82.51,
+    "false_alarms_per_hour": 108.05962913586231,
+    "seizure_bouts": 35,
+    "detected_seizure_bouts": 26,
+    "seizure_bout_sensitivity": 0.7428571428571429,
+    "definition": "A false alarm is a contiguous predicted-positive run within one recording that contains no positive-labeled window. A seizure bout is a contiguous run of positive-labeled windows."
+  },
+  "macro_sensitivity": 0.3187348890991275,
+  "macro_specificity": 0.9730336057298482,
+  "min_patient_sensitivity": 0.0,
+  "patient_count": 3,
+  "loss": 0.03821853966371311,
+  "threshold_source": "best validation epoch; selected before test evaluation",
+  "best_epoch": 3,
+  "test_evaluated_during_selection": false
+}

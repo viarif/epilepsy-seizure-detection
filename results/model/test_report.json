@@ -1,0 +1,70 @@
+{
+  "threshold_logit": -2.632594108581543,
+  "threshold_probability": 0.06706995072763683,
+  "sensitivity": 0.34806056834681603,
+  "specificity": 0.9833727317537453,
+  "precision": 0.1299666950662226,
+  "f1": 0.18926235055267313,
+  "accuracy": 0.9788711900975605,
+  "balanced_accuracy": 0.6657166500502807,
+  "pr_auc": 0.19565706427649404,
+  "roc_auc": 0.8206742820831904,
+  "true_positives": 1678,
+  "false_positives": 11233,
+  "true_negatives": 664344,
+  "false_negatives": 3143,
+  "positive_count": 4821,
+  "negative_count": 675577,
+  "window_count": 680398,
+  "per_patient": {
+    "chb10": {
+      "sensitivity": 0.8702460850111857,
+      "specificity": 0.9959392435512333,
+      "true_positives": 778,
+      "false_positives": 1337,
+      "true_negatives": 327912,
+      "false_negatives": 116,
+      "positive_count": 894,
+      "negative_count": 329249,
+      "window_count": 330143
+    },
+    "chb11": {
+      "sensitivity": 0.3169642857142857,
+      "specificity": 0.9645306436100546,
+      "true_positives": 497,
+      "false_positives": 7339,
+      "true_negatives": 199572,
+      "false_negatives": 1071,
+      "positive_count": 1568,
+      "negative_count": 206911,
+      "window_count": 208479
+    },
+    "chb12": {
+      "sensitivity": 0.1708350996184824,
+      "specificity": 0.981659338531169,
+      "true_positives": 403,
+      "false_positives": 2557,
+      "true_negatives": 136860,
+      "false_negatives": 1956,
+      "positive_count": 2359,
+      "negative_count": 139417,
+      "window_count": 141776
+    }
+  },
+  "event_metrics": {
+    "false_alarms": 5867,
+    "evaluated_hours": 94.51138888888889,
+    "false_alarms_per_hour": 62.077174708515436,
+    "seizure_bouts": 44,
+    "detected_seizure_bouts": 37,
+    "seizure_bout_sensitivity": 0.8409090909090909,
+    "definition": "A false alarm is a contiguous predicted-positive run within one recording that contains no positive-labeled window. A seizure bout is a contiguous run of positive-labeled windows."
+  },
+  "macro_sensitivity": 0.45268182344798463,
+  "macro_specificity": 0.9807097418974856,
+  "min_patient_sensitivity": 0.1708350996184824,
+  "patient_count": 3,
+  "loss": 0.03702108165477745,
+  "threshold_source": "locked checkpoint validation threshold",
+  "checkpoint_epoch": 3
+}
