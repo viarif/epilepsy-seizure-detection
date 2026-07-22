@@ -12,7 +12,6 @@
 - 每折：23 位患者训练，剩下 1 位患者测试。
 - 阈值：固定使用原验证集锁定阈值，logit `-2.632594108582`，sigmoid 约 `0.067069950728`。
 - 不在每折测试患者上重新选阈值。
-- 不使用 PTSM，不使用 mask，不提高阳性类别 loss 权重。
 - 不使用投票、平滑、refractory period 或患者适配。
 
 项目用于科研实验，不是临床诊断或告警系统。
@@ -163,12 +162,7 @@ w(p,b) = N_+ / (P * B_p * L_b)
 - 所有层次阳性权重均值为 1。
 - 阴性窗口权重固定为 1。
 
-当前最终方案的阳性类别额外代价为 1：
-
-```text
-sample_weight = 1                if y = 0
-sample_weight = 1 * w(p,b)       if y = 1
-```
+训练损失直接使用这套层次权重，没有额外正类倍率。
 
 ## LOSO 脚本
 
@@ -211,25 +205,6 @@ $py = 'C:\Users\ASUS\anaconda3\envs\unet\python.exe'
 - window specificity 约 0.98357。
 
 这个口径已经不作为最终结果。对应旧测试入口 `scripts/evaluate.py` 和旧 test JSON 已删除。保留 `results/model/best.pt`、`validation_report.json` 等训练/阈值来源文件。
-
-### 阳性 loss 权重
-
-曾比较 `1/2/3/5/8` 倍阳性类别代价。
-
-validation 选择 5 倍，但锁定完整 test 后没有改善窗口级 sensitivity/specificity，因此最终恢复为 1 倍。脚本 `scripts/train.py` 仍保留 `--positive-class-weight` 以便复现实验。
-
-### 无掩码 PTSM-lite
-
-曾实现无掩码 PTSM-lite：
-
-- CNN backbone 相同。
-- task projection 和 subject projection。
-- subject auxiliary classifier。
-- task 特征上做 subject adversary。
-- orthogonality 和 cross-covariance loss。
-- 推理只用 task branch。
-
-完整 test 相对原模型有小幅改善，但用户决定回到原方案，不作为最终结果。相关文件仍保留为本地历史实验。
 
 ## 当前限制
 

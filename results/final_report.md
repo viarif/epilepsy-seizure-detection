@@ -1,6 +1,6 @@
 # Leave-one-subject-out final report
 
-当前采用原始 `SeizureNetLite`，不使用 PTSM，不提高阳性 loss 权重。评估为 24 折 leave-one-subject-out：每折 23 位患者训练，剩余 1 位患者测试。阈值固定为 logit `-2.632594108582`。
+当前采用原始 `SeizureNetLite`。评估为 24 折 leave-one-subject-out：每折 23 位患者训练，剩余 1 位患者测试。阈值固定为 logit `-2.632594108582`。
 
 ## Overall
 
